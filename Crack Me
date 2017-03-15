@@ -1,0 +1,15 @@
+Crack me : 5470E76FFFE91A100BF83F6A6BCA0737918400CF
+
+push	0		; lpModuleName Null means exe, else name of dll
+call	GetModuleHandleA ;REF MSDN "If this parameter is NULL,
+                       ;GetModuleHandle returns a handle to the file used to create the calling process (.exe file)."
+                       ; output in EAX obviously 
+mov	ds:hInstance, eax ; copy the value to the Data Segment "4020CA"
+push	0		; lpWindowName name of window
+push	offset ClassName ; "No need to disasm the code!"  ;lpClassName
+call	FindWindowA ; REF MSDN If lpClassName points to a string, it specifies the window class name. 
+                  ;The class name can be any name registered with RegisterClass or RegisterClassEx, 
+                  ;or any of the predefined control-class names. 
+or	eax, eax      ; empty the EAX
+jz	short loc_40101D ; Jump To 
+retn
