@@ -1,5 +1,18 @@
 Crack me : 5470E76FFFE91A100BF83F6A6BCA0737918400CF
 
+;Structure:
+WNDCLASSA struc	; (sizeof=0x28,	standard type)
+style dd ?
+lpfnWndProc dd ?	; offset
+cbClsExtra dd ?
+cbWndExtra dd ?
+hInstance dd ?		; offset
+hIcon dd ?		; offset
+hCursor	dd ?		; offset
+hbrBackground dd ?	; offset
+lpszMenuName dd	?	; offset
+lpszClassName dd ?	; offset
+WNDCLASSA ends
 
 public start ; main Program 
 start proc near ; prolog 
@@ -9,72 +22,76 @@ call	GetModuleHandleA ;REF MSDN "If this parameter is NULL,
                        ;GetModuleHandle returns a handle to the file used to create the calling process (.exe file)."
                        ; output in EAX obviously 
 mov	ds:hInstance, eax ; copy the value to the Data Segment "4020CA"
-push	0		; lpWindowName name of window
+push	0		; lpWindowName name of window if null it will take the ClassName
 push	offset ClassName ; "No need to disasm the code!"  ;lpClassName
 call	FindWindowA ; REF MSDN If lpClassName points to a string, it specifies the window class name. 
                   ;The class name can be any name registered with RegisterClass or RegisterClassEx, 
                   ;or any of the predefined control-class names. 
-or	eax, eax      ; empty the EAX
-jz	short loc_40101D ; Jump To 
+or	eax, eax      ; it returned Null
+jz	short loc_40101D ; Jump To other subroutine 
 retn
 
 
 loc_40101D:
-mov	ds:WndClass.style, 4003h ;
-mov	ds:WndClass.lpfnWndProc, offset	WndProc
-mov	ds:WndClass.cbClsExtra,	0
-mov	ds:WndClass.cbWndExtra,	0
-mov	eax, ds:hInstance
-mov	ds:WndClass.hInstance, eax
-push	64h		; lpIconName
-push	eax		; hInstance
-call	LoadIconA
-mov	ds:WndClass.hIcon, eax
-push	7F00h		; lpCursorName
-push	0		; hInstance
-call	LoadCursorA
-mov	ds:WndClass.hCursor, eax
-mov	ds:WndClass.hbrBackground, 5
-mov	ds:WndClass.lpszMenuName, offset aMenu ; "MENU"
-mov	ds:WndClass.lpszClassName, offset ClassName ; "No need to disasm the code!"
-push	offset WndClass	; lpWndClass
-call	RegisterClassA
-push	0		; lpParam
-push	ds:hInstance	; hInstance
-push	0		; hMenu
-push	0		; hWndParent
+mov	ds:WndClass.style, 4003h ; // initialising the valuse of WndClass Structure  16387 in decimal
+mov	ds:WndClass.lpfnWndProc, offset	WndProc ; A pointer to the window procedure
+mov	ds:WndClass.cbClsExtra,	0 ;The number of extra bytes to allocate following the window-class structure.  default is 0
+mov	ds:WndClass.cbWndExtra,	0 ; The number of extra bytes to allocate following the window instance default 0
+mov	eax, ds:hInstance ;  Module handle copied to Acumlator 
+mov	ds:WndClass.hInstance, eax ; Module handle is copied in WndClass.hInstance 
+push	64h		; lpIconName icon name pushed in stack
+push	eax		; hInstance module handle pushed into stack 
+call	LoadIconA ; user32dll ^^^^ Loads the specified icon resource from the executable (.exe) file associated with an application instance.
+mov	ds:WndClass.hIcon, eax ; handle to newly loaded icon saved in wndClass struct
+push	7F00h		; lpCursorName ;cursor name
+push	0		; hInstance ; cursor instance instanace of desktop wecan say
+call	LoadCursorA ; ^^^^ Loads the specified cursor resource from the executable (.EXE) file associated with an application instance
+mov	ds:WndClass.hCursor, eax ;  saved the cursor properties in WndClass 
+mov	ds:WndClass.hbrBackground, 5; set the background of window
+mov	ds:WndClass.lpszMenuName, offset aMenu ; "MENU" set meanu name 
+mov	ds:WndClass.lpszClassName, offset ClassName ; "No need to disasm the code!" set the windows name 
+push	offset WndClass	; lpWndClass push the WndClass in stack so that we can call the function RegisterClass 
+call	RegisterClassA ; ^^^^ Registers a window class for subsequent use in calls to the CreateWindow or CreateWindowEx function. return class atom which uniquely id the class being registered 
+push	0		; lpParam ; way to create a window , Param is 0 as no aditional data is nedded as no multiple Documnet interface 
+push	ds:hInstance	; hInstance handle of the Module 
+push	0		; hMenu ; NULL
+push	0		; hWndParent NULL
 push	8000h		; nHeight
 push	8000h		; nWidth
-push	6Eh		; Y
-push	0B4h		; X
-push	0CF0000h	; dwStyle
+push	6Eh		; Y 110px axis
+push	0B4h		; X 180px axis
+push	0CF0000h	; dwStyle overlapped windows 
 push	offset WindowName ; "CrackMe v1.0"
 push	offset ClassName ; "No need to disasm the code!"
-push	0		; dwExStyle
-call	CreateWindowExA
-mov	ds:hWnd, eax
-push	1		; nCmdShow
-push	ds:hWnd		; hWnd
-call	ShowWindow
-push	ds:hWnd		; hWnd
-call	UpdateWindow
-push	1		; bErase
-push	0		; lpRect
+push	0		; dwExStyle ; exit style 
+call	CreateWindowExA ; ^^^^ Creates an extended window 
+mov	ds:hWnd, eax ; handle to new class is stored in hWnd 
+push	1		; nCmdShow show state shownormal 
+push	ds:hWnd		; hWnd  windows handle 
+call	ShowWindow ; ^^^^ Sets the specified window's show state.  
+push	ds:hWnd		; hWnd again pushed the windows handle for new routine 
+call	UpdateWindow ; ^^^^ It will update the client are of specified windows 
+push	1		; bErase true
+push	0		; lpRect NULL
 push	dword ptr [ebp+8] ; hWnd
-call	InvalidateRect
+call	InvalidateRect ; ^^^^ The InvalidateRect function adds a rectangle to the specified window's update region. 
+                      ;The update region represents the portion of the window's client area that must be redrawn.
 
-loc_4010F1:		; wMsgFilterMax
-push	0
-push	0		; wMsgFilterMin
-push	0		; hWnd
-push	offset Msg	; lpMsg
-call	GetMessageA
-cmp	ax, 0
-jz	short loc_40111D
-push	offset Msg	; lpMsg
-call	TranslateMessage
-push	offset Msg	; lpMsg
-call	DispatchMessageA
+loc_4010F1:		
+push	0   ; wMsgFilterMax = 0
+push	0		; wMsgFilterMin = 0
+push	0		; hWnd handle to windows 
+push	offset Msg	; lpMsg ^^^^ A pointer to an MSG structure that receives message information from the thread's message queue
+call	GetMessageA ; ^^^^ Retrieves a message from the calling thread's message queue. 
+                  ;The function dispatches incoming sent messages until a posted message is available for retrieval. 
+cmp	ax, 0 ; if the returned value is -1 , 1 or 0 
+jz	short loc_40111D ; if 0 exit the module 
+push	offset Msg	; lpMsg else prepare calling   TranslateMessage 
+call	TranslateMessage ; ^^^^ Translates virtual-key messages into character messages. The character messages are posted to the calling thread's message queue, 
+                       ;to be read the next time the thread calls the GetMessage 
+push	offset Msg	; lpMsg 
+call	DispatchMessageA ;  Dispatches a message to a window procedure. 
+                       ;It is typically used to dispatch a message retrieved by the GetMessage function.
 jmp	short loc_4010F1
 
 loc_40111D:		; uExitCode
