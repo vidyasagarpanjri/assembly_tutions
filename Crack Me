@@ -98,3 +98,148 @@ loc_40111D:		; uExitCode
 push	ds:Msg.wParam
 call	ExitProcess
 start endp
+
+; then we have a WinProc module as main program 
+
+loc_4011ED:		; dwInitParam
+push	0
+push	offset DialogFunc ; lpDialogFunc
+push	[ebp+hWndParent] ; hWndParent
+push	offset TemplateName ; "DLG_ABOUT"
+push	ds:hInstance	; hInstance
+call	DialogBoxParamA ;Creates a modal dialog box from a dialog box template resource. for username
+jmp	short loc_4011E6
+
+loc_401209:		; dwInitParam
+push	0
+push	offset sub_401253 ; lpDialogFunc
+push	[ebp+hWndParent] ; hWndParent
+push	offset aDlg_regis ; "DLG_REGIS"
+push	ds:hInstance	; hInstance
+call	DialogBoxParamA; Creates a modal dialog box from a dialog box template resource. for password 
+cmp	eax, 0 ; test for null
+jz	short loc_4011E6 ; if null exit 
+push	offset String ; push string to stack 
+call	sub_40137E  ;funation to encode username ; 
+push	eax ;push result to stack 
+push	offset byte_40217E ; push the pass code string to stack 
+call	sub_4013D8 ; encode the passcode string 
+add	esp, 4 ; remove the four bytes from stack
+pop	eax ; pop eax
+cmp	eax, ebx ; compare eax and ebx
+jz	short loc_40124C  ; if equal print great work 
+call	sub_401362 ; else call no luck mate
+jmp	short loc_4011E6 ; exit  wnd proc.
+
+loc_40124C:
+call	sub_40134D
+jmp	short loc_4011E6
+WndProc	endp
+;end of wndProc function;
+
+
+;Logic Code  for user name function ;
+sub_40137E proc	near // start the function 
+
+arg_0= dword ptr  4 ; initialise the local vairable offset 4 in stack pointer 
+
+mov	esi, [esp+arg_0] ; vidyasagar entered string 
+push	esi ; pushed it to stack
+
+loc_401383:  ;@@
+mov	al, [esi]  ; move the first word to accumlator 
+test	al, al ; test if al al
+jz	short loc_40139C ; if value is zero then move to this 
+cmp	al, 41h ; compare the value with 41h i.e 65 or A
+jb	short loc_4013AC ; if it is lower than it jump to loc_4013AC  No luck .
+cmp	al, 5Ah ; compare value with 5Ah, Z or 90
+jnb	short loc_401394 ;if value is higher than 5Ah, Z or 90 jump  loc_401394 convert the value to uppercase 
+inc	esi ; increament the esi value, means next value in stack 
+jmp	short loc_401383 ; loop @@
+
+
+loc_401394:
+call	sub_4013D2 ; to convert lower case to upper case 
+inc	esi ; increase the esi move to next char 
+jmp	short loc_401383
+
+loc_40139C:
+pop	esi ; 
+call	sub_4013C2 ; //adding the ascii values  
+xor	edi, 5678h  ; xor the result with 5678h
+mov	eax, edi  ; move the result in eax
+jmp	short locret_4013C1 ; exit the function 
+
+;display the no luck message is message is no [a-zA-Z];
+loc_4013AC:
+pop	esi
+push	30h		; uType
+push	offset aNoLuck	; "No luck!"
+push	offset aNoLuckThereMat ; "No luck there, mate!"
+push	dword ptr [ebp+8] ; hWnd
+call	MessageBoxA
+
+locret_4013C1:
+retn
+sub_40137E endp
+
+
+;; to convert the value to upper case 
+;; subtract the 20h or 32 from the lower case it will return value to upper case 
+;; like v ascii=118 ;  118 - 32 = 86; 86 is ascii of V ;)
+sub_4013C2 proc near
+sub     al, 20h ; subtract 20; to convert into upper case 
+mov     [esi], al ; moveis to the esi address 
+retn
+sub_4013C2 endp
+
+
+
+;adding the ascii values of chars ;
+; return value is in edi
+sub_4013C2 proc	near
+xor	edi, edi ; empty the edi i.e edi =0
+xor	ebx, ebx ; empty the ebx i.e  ebx = 0
+
+loc_4013C6: ;@@ loop
+mov	bl, [esi] ; first value  
+test	bl, bl ; test for zero or NULL
+jz	short locret_4013D1 ;if zero  exit the funtion with return 0 
+add	edi, ebx ; else add edi and ebx 
+inc	esi ; inc esi point next value 
+jmp	short loc_4013C6 ; @@ loop
+
+locret_4013D1:
+retn
+sub_4013C2 endp
+
+
+
+;for paswword function ;
+sub_4013D8 proc	near
+
+arg_0= dword ptr  4  ;take the input argument 
+
+xor	eax, eax ;clear eax ,NULL
+xor	edi, edi ; clear edi ,NULL
+xor	ebx, ebx ; clear ebx ,NULL
+mov	esi, [esp+arg_0] ; pointing to the parameter in stack 
+
+
+loc_4013E2: ; @@loop
+mov	al, 0Ah ; move A or 10 to al or eax
+mov	bl, [esi] ; copy the value at esi to ebx
+test	bl, bl ; test for null 
+jz	short loc_4013F5 ; if ebx is 0 goto to loc_4013F5
+sub	bl, 30h ; else subtract 30h 48 from ebx
+imul	edi, eax ;multiply edi and eax i.e edi and Ah
+add	edi, ebx ; add edi and ebx
+inc	esi ; point to next value of string 
+jmp	short loc_4013E2 ;@@loop
+
+loc_4013F5:
+xor	edi, 1234h ; Xor with 1234h
+mov	ebx, edi ; move the edi value to ebx 
+retn 
+sub_4013D8 endp
+
