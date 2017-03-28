@@ -1,0 +1,3 @@
+40c92f : push 58h; push X to stack
+40c931 : push 0041E478 
+40c936 : call 00411850
